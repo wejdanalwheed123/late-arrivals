@@ -170,6 +170,7 @@ const DEFAULT_ROSTER = {
 let DATA = { days: [], roster: JSON.parse(JSON.stringify(DEFAULT_ROSTER)) };
 let openDays = new Set();
 let openMonths = new Set();
+let monthsInitialized = false;
 function toggleMonth(mk){
   if(openMonths.has(mk)) openMonths.delete(mk); else openMonths.add(mk);
   render();
@@ -536,7 +537,7 @@ function render(){
     groups[mk].push(d);
   });
   const monthKeys = Object.keys(groups).sort().reverse();
-  if(openMonths.size===0 && monthKeys.length>0) openMonths.add(monthKeys[0]);
+  if(!monthsInitialized && monthKeys.length>0){ openMonths.add(monthKeys[0]); monthsInitialized = true; }
   const monthsHtml = monthKeys.map(mk=>{
     const groupDays = groups[mk];
     const isOpen = openMonths.has(mk);
