@@ -64,7 +64,7 @@
   table.entries-table{width:100%; border-collapse:collapse; margin-top:10px; font-size:13.5px;}
   table.entries-table th{text-align:right; padding:7px 8px; background:var(--paper-2); border:1px solid var(--line); font-size:12.5px;}
   table.entries-table td{padding:7px 8px; border:1px solid var(--line);}
-  table.entries-table td.del{text-align:center; width:60px; white-space:nowrap;}
+  table.entries-table td.del{text-align:center; width:36px;}
   .row-del{background:none; border:none; color:var(--line); cursor:pointer; font-size:14px;}
   .row-del:hover{color:#B3462C;}
 
@@ -74,8 +74,12 @@
   .empty-state{padding:20px; text-align:center; color:var(--ink-soft); font-size:13px;}
   .top-add{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;}
 
+  .status-pill{display:inline-block; padding:3px 13px; border-radius:999px; font-size:12px; font-weight:700; white-space:nowrap;}
+  .status-pill.late{background:#FBEAD0; color:#8A5A12; border:1px solid #E9C98B;}
+
   #printAllContainer{display:none;}
   @media print{
+    *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     body{background:#fff;}
     header.top{background:#fff !important; color:#1F2A24 !important;}
     header.top::after{display:none;}
@@ -88,6 +92,13 @@
     body.printing-all #printAllContainer{display:block;}
     #printAllContainer{padding:16px;}
     #printAllContainer h2.print-h{font-size:20px; border-bottom:2px solid #1F4E42; padding-bottom:8px; margin-bottom:14px;}
+    #printAllContainer .day-card{border:1px solid #DCE3D8; border-radius:12px; margin-bottom:16px; padding:12px 14px; break-inside:avoid;}
+    #printAllContainer .day-title{color:#1F4E42; font-size:15px;}
+    #printAllContainer table.entries-table{width:100%; border-collapse:collapse; font-size:13px; margin-top:8px;}
+    #printAllContainer table.entries-table thead th{background:#1F4E42 !important; color:#fff !important; font-weight:700; padding:9px 10px; border:1px solid #1F4E42;}
+    #printAllContainer table.entries-table td{padding:8px 10px; border:1px solid #D6DBD1;}
+    #printAllContainer table.entries-table tbody tr:nth-child(even) td{background:#F0F4F0 !important;}
+    #printAllContainer .month-group-head h2{color:#1F4E42;}
   }
 </style>
 </head>
@@ -132,32 +143,29 @@ const STORE_KEY = 'late-arrivals-v1';
 
 const DEFAULT_ROSTER = {
   "الصف الأول الابتدائي": ["لي تشي تشانغ","أريج منصور حمود العنزي","العنود سلطان فراج السبيعي","العنود معيذر عبدالله القحطاني","الهنوف مشاري حمد الدوسري","الين متعب عبدالله العنزي","توق متعب خالد العنزي","دانة عبدالاله منور السلمي","دانة ماجد الدوسري","مسك صالح راشد العنزي","مالك محمد ضاحي العنزي","ميار ندى عمير الشمري","هناي سعد سلمان العنزي"],
-  "الصف الثاني الابتدائي": ["اثير عبدالكريم عويد المطيري","الجوهرة ماجد حمد الدوسري","العنود فيصل عبدالعزيز الغامدي","الهنوف احمد مسفر الغبيوي","جود احمد هجاج محمد","ريما بندر رواف العنزي","غرام سامي سعد سفر الغامدي","غزل عمر محمد العنزي","في عبدالله مضحي الشهري","لانا مشوح مانع العنزي","لينا طارق عقيل الزهراني","ميليا طالل سعد القحطاني","هناي محمد ركيان العنزي","هنوف ناصر محمد الشهري"],
-  "الصف الثالث الابتدائي": ["حنين عبدالله ربيع العنزي","خزامى عبدالرحمن علي الخطيب","دالي سلطان حمد الدوسري","ديم ثنيان خليف العنزي","ريم ممدوح بريت الشمري","ريم منصور ابراهيم الكنعاني","سحاب عبدالعزيز سعود الحربي","سحاب عبدالله فهاد البقمي","سما ثنيان خليف العنزي","سما سطام هادي المطيري","شهد عبدالرحمن حمد العنزي","شوق محمد حامد الشهري","عائشه خالد بستان العنزي","غلا عمر محمد العنزي","فاطمة مشعل مفضي العنزي","فرح ناصر محمد العميم","هدى منصور حسين العنزي","هنا وائل محمد عوض","هيله حسام محمد صالح العيد","وتين ثامر عبيد العنزي"],
+  "الصف الثاني الابتدائي": ["اثير عبدالكريم عويد المطيري","الجوهرة ماجد حمد الدوسري","العنود فيصل عبدالعزيز الغامدي","الهنوف احمد مسفر الغبيوي","جود احمد هجاج محمد","ريما بندر رواف العنزي","غرام سامي سعد سفر الغامدي","غزل عمر محمد العنزي","في عبدالله مضحي الشهري","النا مشوح مانع العنزي","لينا طارق عقيل الزهراني","ميليا طالل سعد القحطاني","هناي محمد ركيان العنزي","هنوف ناصر محمد الشهري"],
+  "الصف الثالث الابتدائي": ["حنين عبدالله ربيع العنزي","خزامى عبدالرحمن علي الخطيب","دالي سلطان حمد الدوسري","ديم ثنيان خليف العنزي","ريم ممدوح بريت الشمري","ريم منصور ابراهيم الكنعاني","سحاب عبدالعزيز سعود الحربي","سحاب عبدالله فهاد البقمي","سما ثنيان خليف العنزي","سما سطام هادي المطيري","شهد عبدالرحمن حمد العنزي","شوق محمد حامد الشهري","عائشه خالد بستان العنزي","غال عمر محمد العنزي","فاطمة مشعل مفضي العنزي","فرح ناصر محمد العميم","هدى منصور حسين العنزي","هيله حسام محمد صالح العيد","وتين ثامر عبيد العنزي"],
   "الصف الرابع الابتدائي": ["أسماء منصور محمد آل قريش","ألين عماد فرحان العنزي","العنود راشد ملفي الدوسري","اوركيد خالد عبدالله الخميس","ترف ناصر محمد سمران المطيري","ريما محمد مطران الشمري","ريما مهنا عبدالرزاق العنزي","ساره فيصل عبدالعزيز الغامدي","سحاب محمد ضاحي العنزي","سعاد إبراهيم سعد الداود","سمو ناصر عبدالله الاسمري","شموخ عبدالعزيز سعود الحربي","فلوه ابراهيم خالد القوسي","لدن احمد محمد وران العنزي","لين احمد هجاج محمد","نوف محمد سعود محمد الزيد"],
-  "الصف الخامس الابتدائي": ["الوتين سعيد محمد حامد الغامدي","ايلين عيسى ابراهيم فرحان","جود خلف علي العنزي","جود مفلح حامد السلمي","حور تركي حمد الحازمي","حور عبدالله محمد الشهري","دانا محمد سارح العسيري","دانة حمود حمد الرشيدي","دانه سليم حامد السرهيد","ديالا علي محمد الشهري","رفا عبدالعزيز علي الالمعي","عيدة عبدالله فهاد البقمي","فرح حمود خليل حمود الحمزة","لمى بندر رواف العنزي","ملاذ محمود مضحي العنزي","وجد يوسف صالح ساير العنزي"],
-  "الصف السادس الابتدائي": ["الجوهرة نايف جهجاه الطيار","الريم فهد ناصر الصنيدح","الهنوف بندر مذكر الربوب الرويس","ترف فهد عوض المطيري","حور راشد ملفي الدوسري","حور عبدالمجيد تركي العنزي","دانه فيصل فداع شريم","زينة وائل محمد عوض","سارة وائل محمد الفالح","كيان صالح عبدالله القرني","لمار عيسى عبدالله المطيري","مسك مبارك سلطان العتيبي","منيرة جابر سعود العتيبي"],
+  "الصف الخامس الابتدائي": ["الوتين سعيد محمد حامد الغامدي","ايلين عيسى ابراهيم فرحان","جود خلف علي العنزي","جود مفلح حامد السلمي","حور تركي حمد الحازمي","حور عبدالله محمد الشهري","دانا محمد سارح العسيري","دانة حمود حمد الرشيدي","دانه سليم حامد السرهيد","ديالا علي محمد الشهري","رفا عبدالعزيز علي الالمعي","عيدة عبدالله فهاد البقمي","فرح حمود خليل حمود الحمزة","لمى بندر رواف العنزي","مالذ محمود مضحي العنزي","وجد يوسف صالح ساير العنزي"],
+  "الصف السادس الابتدائي": ["الجوهرة نايف جهجاه الطيار","الريم فهد ناصر الصنيدح","الهنوف بندر مذكر الربوب الرويس","ترف فهد عوض المطيري","حور راشد ملفي الدوسري","حور عبدالمجيد تركي العنزي","دانه فيصل فداع شريم","سارة وائل محمد الفالح","كيان صالح عبدالله القرني","لمار عيسى عبدالله المطيري","مسك مبارك سلطان العتيبي","منيرة جابر سعود العتيبي"],
   "الصف الأول المتوسط": ["الجوهره محمد عبدالعزيز العيد","تسي هوا تشن","روبين صالح محمد الشهري","لمى احمد المعيلي","ليندا مهنا عبدالرزاق العنزي","موضي إبراهيم سعد الداود","منيرة عبدالله سالم اللحيدان","منيرة المقاطي","نوره عبدالله بن عبدالعزيز الهداب"],
-  "الصف الثاني المتوسط": ["الجوهره سامي سعد سفر الغامدي","الماسة عبداللطيف صالح الصالح","داليا عماد فرحان العنزي","دانه حمد سالم الدوسري","درة فهد ناصر الصنيدح","درر راقي عبدالله الراقي","ديم عبدالله محمد الشهري","ريما فيصل معند العنزي","ريمان ناصر عبدالله الاسمري","شيهانه سعد عبدالغني الشمراني","غنى منصور حسين العنزي","غزل عبداللطيف ربيع العنزي","كادي صالح عبدالله القرني","النا مهنا عبدالرزاق العنزي","ميلان عبدالمجيد تركي العنزي","وتين عبدالله صخيل الشمري"],
-  "الصف الثالث المتوسط": ["تالا سهيل عبدالله الحديثي","جود عبدالحكيم منصور الكامل","جودي مهنا سالم العنزي","ريسان احمد العنزي","سلمى وائل محمد عوض","طرفة عبدالله سالم اللحيدان","عالية عماد فرحان العنزي","غزل سعود برجس العنزي","ميهاف ناصر محمد العميم"],
-  "الصف الأول الثانوي": ["العنود رياض احمد الفريح","دانة فهد الحربي","ريتال خالد حمدان العنزي","ريفال خالد حمدان العنزي","سدن خالد فرحة الغامدي","شهد صالح محمد الشهري","ضي عبدالله مضحي الشهري","كيان محمود بستان العنزي","لتين مفضي عوض العنزي"]
+  "الصف الثاني المتوسط": ["الجوهره سامي سعد سفر الغامدي","داليا عماد فرحان العنزي","دانه حمد سالم الدوسري","درة فهد ناصر الصنيدح","درر راقي عبدالله الراقي","ديم عبدالله محمد الشهري","ريما فيصل معند العنزي","ريمان ناصر عبدالله الاسمري","شيهانه سعد عبدالغني الشمراني","غنى منصور حسين العنزي","غزل عبداللطيف ربيع العنزي","كادي صالح عبدالله القرني","النا مهنا عبدالرزاق العنزي","ميلان عبدالمجيد تركي العنزي","وتين عبدالله صخيل الشمري"],
+  "الصف الثالث المتوسط": ["بسمة عبدالعزيز عماش العنزي","تالا سهيل عبدالله الحديثي","جود عبدالحكيم منصور الكامل","جودي مهنا سالم العنزي","ريسان احمد العنزي","طرفة عبدالله سالم اللحيدان","عالية عماد فرحان العنزي","غزل سعود برجس العنزي","ميهاف ناصر محمد العميم"],
+  "الصف الأول الثانوي": ["العنود رياض احمد الفريح","ريتال خالد حمدان العنزي","ريفال خالد حمدان العنزي","سدن خالد فرحة الغامدي","شهد صالح محمد الشهري","ضي عبدالله مضحي الشهري","كيان محمود بستان العنزي","لتين مفضي عوض العنزي"]
 };
 
 let DATA = { days: [], roster: JSON.parse(JSON.stringify(DEFAULT_ROSTER)) };
 let openDays = new Set();
-let editingEntries = new Set();
-let openStats = new Set(); // month keys with stats table expanded
-let closedMonths = new Set(); // month keys the user explicitly collapsed
 
 function uid(){ return Math.random().toString(36).slice(2,10); }
 function escapeHtml(str){ const d = document.createElement('div'); d.textContent = str||''; return d.innerHTML; }
 function formatDate(iso){
   if(!iso) return '';
   const d = new Date(iso);
-  return d.toLocaleDateString('ar-SA-u-ca-gregory', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  return d.toLocaleDateString('ar-SA', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
 }
 function monthKey(iso){ const d = new Date(iso); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
-function monthLabel(iso){ const d = new Date(iso); return d.toLocaleDateString('ar-SA-u-ca-gregory', {month:'long', year:'numeric'}); }
+function monthLabel(iso){ const d = new Date(iso); return d.toLocaleDateString('ar-SA', {month:'long', year:'numeric'}); }
 
 function loadData(){
   try{
@@ -165,7 +173,7 @@ function loadData(){
     if(raw){
       const parsed = JSON.parse(raw);
       DATA.days = parsed.days || [];
-      DATA.roster = JSON.parse(JSON.stringify(DEFAULT_ROSTER));
+      DATA.roster = parsed.roster || JSON.parse(JSON.stringify(DEFAULT_ROSTER));
     }
   }catch(e){}
 }
@@ -263,6 +271,7 @@ function addEntry(dayId){
   const clsOther = document.getElementById('nClsOther_'+dayId).value.trim();
   const nameSel = document.getElementById('nNameSel_'+dayId).value;
   const nameOther = document.getElementById('nNameOther_'+dayId).value.trim();
+  const time = document.getElementById('nTime_'+dayId).value.trim();
 
   const cls = clsSel === '__other__' ? clsOther : clsSel;
   const name = (clsSel === '__other__' || nameSel === '__other__') ? nameOther : nameSel;
@@ -271,32 +280,13 @@ function addEntry(dayId){
   if(!name){ alert('اختاري اسم الطالبة أو اكتبيه.'); return; }
 
   const day = DATA.days.find(d=>d.id===dayId);
-  day.entries.push({id:uid(), name, cls});
+  day.entries.push({id:uid(), name, cls, time});
   saveData();
   render();
 }
 function deleteEntry(dayId, entryId){
   const day = DATA.days.find(d=>d.id===dayId);
   day.entries = day.entries.filter(e=>e.id!==entryId);
-  saveData();
-  render();
-}
-function startEntryEdit(entryId){
-  editingEntries.add(entryId);
-  render();
-}
-function cancelEntryEdit(entryId){
-  editingEntries.delete(entryId);
-  render();
-}
-function saveEntryEdit(dayId, entryId){
-  const name = document.getElementById('editName_'+entryId).value.trim();
-  const cls = document.getElementById('editCls_'+entryId).value.trim();
-  if(!name){ alert('اسم الطالبة مطلوب.'); return; }
-  const day = DATA.days.find(d=>d.id===dayId);
-  const entry = day.entries.find(e=>e.id===entryId);
-  entry.name = name; entry.cls = cls;
-  editingEntries.delete(entryId);
   saveData();
   render();
 }
@@ -315,35 +305,25 @@ function addEntryFormHtml(dayId){
         <option value="">— اختاري الطالبة —</option>
       </select>
       <input type="text" id="nNameOther_${dayId}" placeholder="اكتبي اسم الطالبة" style="display:none;">
+      <input type="time" id="nTime_${dayId}">
       <button class="btn btn-ghost" onclick="addEntry('${dayId}')">+ إضافة</button>
     </div>`;
 }
 
 function dayCardHtml(day, forPrint){
   const isOpen = forPrint ? true : openDays.has(day.id);
-  const rows = day.entries.length===0 ? `<tr><td colspan="${forPrint?2:3}" style="text-align:center; color:var(--ink-soft);">لا يوجد طالبات مسجلات</td></tr>` :
-    day.entries.map(e=>{
-      if(!forPrint && editingEntries.has(e.id)){
-        return `
-      <tr>
-        <td><input type="text" id="editName_${e.id}" value="${escapeHtml(e.name)}" style="width:100%; padding:4px 6px; border:1px solid var(--line); border-radius:6px; font-family:inherit; font-size:12.5px;"></td>
-        <td><input type="text" id="editCls_${e.id}" value="${escapeHtml(e.cls)}" style="width:100%; padding:4px 6px; border:1px solid var(--line); border-radius:6px; font-family:inherit; font-size:12.5px;"></td>
-        <td class="del" style="display:flex; gap:4px;">
-          <button class="row-del" style="color:var(--teal);" onclick="saveEntryEdit('${day.id}','${e.id}')" title="حفظ">✓</button>
-          <button class="row-del" onclick="cancelEntryEdit('${e.id}')" title="إلغاء">✕</button>
-        </td>
-      </tr>`;
-      }
-      return `
+  const rows = day.entries.length===0 ? `<tr><td colspan="${forPrint?4:5}" style="text-align:center; color:var(--ink-soft);">لا يوجد طالبات مسجلات</td></tr>` :
+    day.entries.map(e=>`
       <tr>
         <td>${escapeHtml(e.name)}</td>
         <td>${escapeHtml(e.cls)}</td>
-        ${forPrint ? '' : `<td class="del" style="display:flex; gap:4px;"><button class="row-del" onclick="startEntryEdit('${e.id}')" title="تعديل">✏️</button><button class="row-del" onclick="deleteEntry('${day.id}','${e.id}')" title="حذف">✕</button></td>`}
-      </tr>`;
-    }).join('');
+        <td>${escapeHtml(e.time)}</td>
+        <td><span class="status-pill late">متأخرة</span></td>
+        ${forPrint ? '' : `<td class="del"><button class="row-del" onclick="deleteEntry('${day.id}','${e.id}')">✕</button></td>`}
+      </tr>`).join('');
   const bodyHtml = `
     <table class="entries-table">
-      <thead><tr><th>اسم الطالبة</th><th>الصف</th>${forPrint?'':'<th></th>'}</tr></thead>
+      <thead><tr><th>اسم الطالبة</th><th>الصف</th><th>ساعة الحضور</th><th>الحالة</th>${forPrint?'':'<th></th>'}</tr></thead>
       <tbody>${rows}</tbody>
     </table>
     ${forPrint ? '' : addEntryFormHtml(day.id)}
@@ -404,11 +384,9 @@ function repeatedLateStats(){
 function monthFrequencyTable(groupDays){
   const map = {};
   groupDays.forEach(day=>{
-    const dayNum = new Date(day.date).getDate();
     day.entries.forEach(e=>{
-      if(!map[e.name]) map[e.name] = { cls: e.cls, count: 0, days: [] };
+      if(!map[e.name]) map[e.name] = { cls: e.cls, count: 0 };
       map[e.name].count++;
-      map[e.name].days.push(dayNum);
       if(e.cls) map[e.name].cls = e.cls;
     });
   });
@@ -419,40 +397,40 @@ function monthFrequencyTable(groupDays){
       <td>${escapeHtml(name)}</td>
       <td>${escapeHtml(v.cls||'')}</td>
       <td>${v.count}</td>
-      <td>${v.days.sort((a,b)=>a-b).join('، ')}</td>
     </tr>`).join('');
   return `
-    <table class="entries-table">
-      <thead><tr><th>اسم الطالبة</th><th>الصف</th><th>عدد المرات</th><th>الأيام</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
-}
-function renderStatsSection(mk, groupDays){
-  const tableHtml = monthFrequencyTable(groupDays);
-  if(!tableHtml) return '';
-  const isOpen = openStats.has(mk);
-  return `
     <div style="margin-bottom:14px;">
-      <div class="day-card-head" style="cursor:pointer; padding:0 0 6px;" onclick="toggleStats('${mk}')">
-        <span style="font-weight:700; font-size:13px; display:flex; align-items:center; gap:6px;"><span class="chev ${isOpen?'open':''}" style="font-size:11px;">▶</span> 📌 عدد المرات هذا الشهر</span>
-      </div>
-      ${isOpen ? tableHtml : ''}
+      <div style="font-weight:700; font-size:13px; margin-bottom:6px;">📌 عدد مرات التأخير هذا الشهر</div>
+      <table class="entries-table">
+        <thead><tr><th>اسم الطالبة</th><th>الصف</th><th>عدد المرات</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
     </div>`;
 }
-function toggleStats(mk){
-  if(openStats.has(mk)) openStats.delete(mk); else openStats.add(mk);
-  render();
-}
-function toggleMonth(mk){
-  if(closedMonths.has(mk)) closedMonths.delete(mk); else closedMonths.add(mk);
-  render();
+
+function exportMonthTally(mk){
+  const days = DATA.days.filter(d=> monthKey(d.date)===mk).sort((a,b)=> new Date(a.date)-new Date(b.date));
+  if(days.length===0) return;
+  const lateMap = {};
+  days.forEach(day=> day.entries.forEach(e=>{ lateMap[e.name+'|'+(e.cls||'')] = {name:e.name, cls:e.cls, time:e.time||''}; }));
+  const late = Object.values(lateMap);
+  const payload = { type:'late-month-tally', month:mk, monthLabel:monthLabel(days[0].date), late };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'حصر-تأخير-'+mk+'.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 function render(){
   const container = document.getElementById('daysContainer');
   const days = DATA.days.slice().sort((a,b)=> new Date(b.date)-new Date(a.date));
   if(days.length===0){
-    container.innerHTML = `<div class="card"><div class="empty-state">لا يوجد أيام مسجلة بعد. أضيفي يوماً من الأعلى.</div></div>`;
+    container.innerHTML = repeatedLateStats() + `<div class="card"><div class="empty-state">لا يوجد أيام مسجلة بعد. أضيفي يوماً من الأعلى.</div></div>`;
     return;
   }
   const groups = {};
@@ -464,20 +442,20 @@ function render(){
   const monthKeys = Object.keys(groups).sort().reverse();
   const monthsHtml = monthKeys.map(mk=>{
     const groupDays = groups[mk];
-    const isOpen = !closedMonths.has(mk);
     return `
       <div class="card month-group">
-        <div class="month-group-head" style="cursor:pointer;" onclick="toggleMonth('${mk}')">
-          <h2><span class="chev ${isOpen?'open':''}" style="font-size:12px; margin-left:6px;">▶</span>🗓️ ${monthLabel(groupDays[0].date)}</h2>
-          <button class="btn btn-ghost" onclick="event.stopPropagation(); printMonth('${mk}')">🖨️ طباعة الشهر كامل</button>
+        <div class="month-group-head">
+          <h2>🗓️ ${monthLabel(groupDays[0].date)}</h2>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-ghost" onclick="printMonth('${mk}')">🖨️ طباعة الشهر كامل</button>
+            <button class="btn btn-ghost" onclick="exportMonthTally('${mk}')">📤 تصدير حصر الشهر</button>
+          </div>
         </div>
-        <div style="display:${isOpen?'block':'none'};">
-          ${renderStatsSection(mk, groupDays)}
-          ${groupDays.map(d=>dayCardHtml(d,false)).join('')}
-        </div>
+        ${monthFrequencyTable(groupDays)}
+        ${groupDays.map(d=>dayCardHtml(d,false)).join('')}
       </div>`;
   }).join('');
-  container.innerHTML = monthsHtml;
+  container.innerHTML = repeatedLateStats() + monthsHtml;
 }
 
 function printSingleBlock(html, title){
@@ -496,10 +474,7 @@ function printDay(dayId){
 function printMonth(mk){
   const days = DATA.days.filter(d=> monthKey(d.date)===mk).sort((a,b)=> new Date(a.date)-new Date(b.date));
   if(days.length===0) return;
-  const tableHtml = monthFrequencyTable(days);
-  const statsHtml = tableHtml ? `<div style="font-weight:700; font-size:13px; margin-bottom:6px;">📌 عدد المرات هذا الشهر</div>${tableHtml}` : '';
-  const daysHtml = days.map(d=> dayCardHtml(d, true)).join('<hr style="border:none; border-top:1px dashed #D6DBD1; margin:18px 0;">');
-  const html = statsHtml + (statsHtml ? '<hr style="border:none; border-top:1px dashed #D6DBD1; margin:18px 0;">' : '') + daysHtml;
+  const html = days.map(d=> dayCardHtml(d, true)).join('<hr style="border:none; border-top:1px dashed #D6DBD1; margin:18px 0;">');
   printSingleBlock(html, 'الطالبات المتأخرات صباحاً — '+monthLabel(days[0].date));
 }
 
