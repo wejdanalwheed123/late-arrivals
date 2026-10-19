@@ -71,6 +71,19 @@
   .add-entry-row{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; align-items:flex-end;}
   .add-entry-row select, .add-entry-row input{border:1px solid var(--line); border-radius:9px; padding:7px 10px; font-family:inherit; font-size:13px; background:var(--paper-2); flex:1; min-width:110px;}
 
+  .quick-roster{margin-top:10px;}
+  .roster-tabs{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;}
+  .roster-tab{padding:7px 13px; border-radius:999px; border:1px solid var(--line); background:var(--paper-2); cursor:pointer; font-family:inherit; font-size:12.5px; font-weight:700; color:var(--ink);}
+  .roster-tab.active{background:var(--teal); color:#fff; border-color:var(--teal);}
+  .roster-toolbar{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap;}
+  .roster-count{font-size:12.5px; color:var(--ink-soft); font-weight:700;}
+  .roster-time{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-soft);}
+  .roster-time input{border:1px solid var(--line); border-radius:8px; padding:5px 8px; font-family:inherit; font-size:12.5px; background:var(--paper-2);}
+  .roster-chip-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:7px;}
+  .roster-chip{padding:9px 10px; border-radius:10px; border:1px solid var(--line); background:#fff; cursor:pointer; font-family:inherit; font-size:12.5px; text-align:center;}
+  .roster-chip.selected{background:#8A5A12; color:#fff; border-color:#8A5A12;}
+  .roster-chip.already{background:var(--paper-2); color:var(--ink-soft); cursor:default;}
+
   .empty-state{padding:20px; text-align:center; color:var(--ink-soft); font-size:13px;}
   .top-add{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;}
 
@@ -162,10 +175,10 @@ function escapeHtml(str){ const d = document.createElement('div'); d.textContent
 function formatDate(iso){
   if(!iso) return '';
   const d = new Date(iso);
-  return d.toLocaleDateString('ar-SA', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  return d.toLocaleDateString('ar-SA-u-ca-gregory', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
 }
 function monthKey(iso){ const d = new Date(iso); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
-function monthLabel(iso){ const d = new Date(iso); return d.toLocaleDateString('ar-SA', {month:'long', year:'numeric'}); }
+function monthLabel(iso){ const d = new Date(iso); return d.toLocaleDateString('ar-SA-u-ca-gregory', {month:'long', year:'numeric'}); }
 
 function loadData(){
   try{
@@ -291,6 +304,84 @@ function deleteEntry(dayId, entryId){
   render();
 }
 
+let quickState = {}; // dayId -> {clsIdx, selected:Set(nameIdx)}
+function quickRosterHtml(dayId){
+  const classes = Object.keys(DATA.roster||{});
+  if(classes.length===0) return addEntryFormHtml(dayId);
+  if(!quickState[dayId]) quickState[dayId] = {clsIdx:0, selected:new Set()};
+  const st = quickState[dayId];
+  const cls = classes[st.clsIdx] || classes[0];
+  const tabs = classes.map((c,ci)=>`<button type="button" class="roster-tab ${ci===st.clsIdx?'active':''}" onclick="setQuickClass('${dayId}',${ci})">${escapeHtml(c)}</button>`).join('');
+  const names = DATA.roster[cls]||[];
+  const day = DATA.days.find(d=>d.id===dayId);
+  const existingNames = new Set((day.entries||[]).filter(e=>e.cls===cls).map(e=>e.name));
+  const chips = names.map((n,ni)=>{
+    const already = existingNames.has(n);
+    const sel = st.selected.has(ni);
+    return `<button type="button" class="roster-chip ${sel?'selected':''} ${already?'already':''}" ${already?'disabled':''} onclick="toggleQuickName('${dayId}',${ni})">${escapeHtml(n)}${already?' ✓ مُضافة':''}</button>`;
+  }).join('');
+  return `
+    <div class="quick-roster">
+      <div class="roster-tabs">${tabs}</div>
+      <div class="roster-toolbar">
+        <div class="roster-count">${st.selected.size} محددة من ${names.length}</div>
+        <div class="roster-time">⏰ <input type="time" id="quickTime_${dayId}"></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-ghost" style="font-size:12px; padding:6px 10px;" onclick="selectAllQuick('${dayId}')">تحديد الكل</button>
+          <button class="btn btn-ghost" style="font-size:12px; padding:6px 10px;" onclick="clearQuickSelection('${dayId}')">إلغاء التحديد</button>
+          <button class="btn btn-primary" style="font-size:12px; padding:6px 10px;" onclick="addQuickSelected('${dayId}')">+ إضافة المحددات متأخرات</button>
+        </div>
+      </div>
+      <div class="roster-chip-grid">${chips}</div>
+      <details style="margin-top:10px;">
+        <summary style="font-size:12px; color:var(--teal); cursor:pointer;">اسم غير موجود بالقائمة؟ أضيفيه يدويًا</summary>
+        ${addEntryFormHtml(dayId)}
+      </details>
+    </div>`;
+}
+function setQuickClass(dayId, clsIdx){
+  quickState[dayId] = {clsIdx, selected:new Set()};
+  render();
+}
+function toggleQuickName(dayId, idx){
+  const st = quickState[dayId];
+  if(!st) return;
+  if(st.selected.has(idx)) st.selected.delete(idx); else st.selected.add(idx);
+  render();
+}
+function selectAllQuick(dayId){
+  const classes = Object.keys(DATA.roster||{});
+  const st = quickState[dayId];
+  if(!st) return;
+  const cls = classes[st.clsIdx];
+  const names = DATA.roster[cls]||[];
+  const day = DATA.days.find(d=>d.id===dayId);
+  const existingNames = new Set((day.entries||[]).filter(e=>e.cls===cls).map(e=>e.name));
+  names.forEach((n,ni)=>{ if(!existingNames.has(n)) st.selected.add(ni); });
+  render();
+}
+function clearQuickSelection(dayId){
+  if(quickState[dayId]) quickState[dayId].selected = new Set();
+  render();
+}
+function addQuickSelected(dayId){
+  const classes = Object.keys(DATA.roster||{});
+  const st = quickState[dayId];
+  if(!st || st.selected.size===0) return;
+  const cls = classes[st.clsIdx];
+  const names = DATA.roster[cls]||[];
+  const day = DATA.days.find(d=>d.id===dayId);
+  const timeEl = document.getElementById('quickTime_'+dayId);
+  const time = timeEl ? timeEl.value : '';
+  st.selected.forEach(ni=>{
+    const name = names[ni];
+    if(name) day.entries.push({id:uid(), name, cls, time});
+  });
+  st.selected = new Set();
+  saveData();
+  render();
+}
+
 function addEntryFormHtml(dayId){
   const classOptions = Object.keys(DATA.roster).map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
   return `
@@ -326,7 +417,7 @@ function dayCardHtml(day, forPrint){
       <thead><tr><th>اسم الطالبة</th><th>الصف</th><th>ساعة الحضور</th><th>الحالة</th>${forPrint?'':'<th></th>'}</tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    ${forPrint ? '' : addEntryFormHtml(day.id)}
+    ${forPrint ? '' : quickRosterHtml(day.id)}
   `;
   if(forPrint){
     return `
@@ -430,7 +521,7 @@ function render(){
   const container = document.getElementById('daysContainer');
   const days = DATA.days.slice().sort((a,b)=> new Date(b.date)-new Date(a.date));
   if(days.length===0){
-    container.innerHTML = repeatedLateStats() + `<div class="card"><div class="empty-state">لا يوجد أيام مسجلة بعد. أضيفي يوماً من الأعلى.</div></div>`;
+    container.innerHTML = `<div class="card"><div class="empty-state">لا يوجد أيام مسجلة بعد. أضيفي يوماً من الأعلى.</div></div>`;
     return;
   }
   const groups = {};
@@ -455,7 +546,7 @@ function render(){
         ${groupDays.map(d=>dayCardHtml(d,false)).join('')}
       </div>`;
   }).join('');
-  container.innerHTML = repeatedLateStats() + monthsHtml;
+  container.innerHTML = monthsHtml;
 }
 
 function printSingleBlock(html, title){
