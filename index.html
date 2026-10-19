@@ -169,6 +169,11 @@ const DEFAULT_ROSTER = {
 
 let DATA = { days: [], roster: JSON.parse(JSON.stringify(DEFAULT_ROSTER)) };
 let openDays = new Set();
+let openMonths = new Set();
+function toggleMonth(mk){
+  if(openMonths.has(mk)) openMonths.delete(mk); else openMonths.add(mk);
+  render();
+}
 
 function uid(){ return Math.random().toString(36).slice(2,10); }
 function escapeHtml(str){ const d = document.createElement('div'); d.textContent = str||''; return d.innerHTML; }
@@ -531,20 +536,24 @@ function render(){
     groups[mk].push(d);
   });
   const monthKeys = Object.keys(groups).sort().reverse();
+  if(openMonths.size===0 && monthKeys.length>0) openMonths.add(monthKeys[0]);
   const monthsHtml = monthKeys.map(mk=>{
     const groupDays = groups[mk];
+    const isOpen = openMonths.has(mk);
     return `
       <div class="card month-group">
-        <div class="month-group-head">
-          <h2>🗓️ ${monthLabel(groupDays[0].date)}</h2>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <div class="month-group-head" onclick="toggleMonth('${mk}')" style="cursor:pointer;">
+          <h2><span class="chev ${isOpen?'open':''}">▶</span> 🗓️ ${monthLabel(groupDays[0].date)} <span style="font-weight:400; color:var(--ink-soft); font-size:12px;">(${groupDays.length} يوم)</span></h2>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;" onclick="event.stopPropagation();">
             <button class="btn btn-ghost" onclick="printMonth('${mk}')">🖨️ طباعة الشهر كامل</button>
             <button class="btn btn-ghost" onclick="printMonthTally('${mk}')">🖨️ طباعة حصر الشهر PDF</button>
             <button class="btn btn-ghost" onclick="exportMonthTally('${mk}')">🔗 ملف ربط بالملف الإرشادي</button>
           </div>
         </div>
+        ${isOpen ? `
         ${monthFrequencyTable(groupDays)}
         ${groupDays.map(d=>dayCardHtml(d,false)).join('')}
+        ` : ''}
       </div>`;
   }).join('');
   container.innerHTML = monthsHtml;
